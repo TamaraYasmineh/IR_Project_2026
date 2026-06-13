@@ -15,6 +15,12 @@ from services.serial_hybrid_service import (
 from services.query_refinement_service import (
     refine_query
 )
+from services.embedding_service import (
+    search_embeddings
+)
+from sentence_transformers import (
+    SentenceTransformer
+)
 st.set_page_config(
     page_title="IR Search System",
     page_icon="🔍",
@@ -77,7 +83,13 @@ df = pd.read_csv(
     "data/processed/quora_processed_1000.csv"
 )
 documents = df["processed_text"].tolist()
+embeddings = joblib.load(
+    "models/embeddings/embeddings.pkl"
+)
 
+embedding_model = SentenceTransformer(
+    "paraphrase-MiniLM-L3-v2"
+)
 tokenized_documents = [
     doc.split()
     for doc in documents
@@ -100,7 +112,8 @@ method = st.selectbox(
         "TF-IDF",
         "BM25",
         "Hybrid Parallel",
-        "Hybrid Serial"
+        "Hybrid Serial",
+        "Embeddings"
     ]
 )
 
@@ -240,14 +253,13 @@ if st.button("Search"):
         elif method == "Hybrid Serial":
     
             _, tfidf_scores = search_tfidf(
-                query,
+                refined_query,
                 vectorizer,
                 tfidf_matrix,
                 top_k=len(documents)
             )
 
-            query_tokens = query.split()
-
+            query_tokens = refined_query.split()
             _, bm25_scores = search_bm25(
                 query_tokens,
                 bm25_model,
@@ -276,6 +288,40 @@ if st.button("Search"):
 
                     st.write(
                         f"BM25 Score: {round(float(bm25_scores[idx]),4)}"
+                    )
+
+                    st.write(
+                        df.iloc[idx]["original_text"]
+                    )
+
+                    st.divider()
+                    
+        elif method == "Embeddings":
+    
+            results, scores = search_embeddings(
+                refined_query,
+                embedding_model,
+                embeddings,
+                top_k=10
+            )
+
+            st.subheader(
+                "Embedding Results"
+            )
+
+            for rank, idx in enumerate(
+                results,
+                start=1
+            ):
+
+                with st.container():
+
+                    st.markdown(
+                        f"### Rank #{rank}"
+                    )
+
+                    st.write(
+                        f"Score: {round(float(scores[idx]),4)}"
                     )
 
                     st.write(
