@@ -32,6 +32,7 @@ from services.evaluation_service import (
     average_precision,
     ndcg_at_k
 )
+
 st.title("🔍 Information Retrieval System")
 st.sidebar.header("Search Parameters")
 
@@ -79,33 +80,55 @@ def load_tfidf_model():
 
 vectorizer, tfidf_matrix = load_tfidf_model()
 
-df = pd.read_csv(
-    "data/processed/quora_processed_1000.csv"
-)
-documents = df["processed_text"].tolist()
-embeddings = joblib.load(
-    "models/embeddings/embeddings.pkl"
-)
+@st.cache_data
+def load_data():
+    return pd.read_csv(
+        "data/processed/quora_processed_1000.csv"
+    )
 
-embedding_model = SentenceTransformer(
-    "paraphrase-MiniLM-L3-v2"
-)
+df = load_data()
+documents = df["processed_text"].tolist()
+@st.cache_resource
+def load_embeddings():
+    return joblib.load(
+        "models/embeddings/embeddings.pkl"
+    )
+
+embeddings = load_embeddings()
+
+@st.cache_resource
+def load_embedding_model():
+    return SentenceTransformer(
+        "paraphrase-MiniLM-L3-v2"
+    )
+
+embedding_model = load_embedding_model()
 tokenized_documents = [
     doc.split()
     for doc in documents
 ]
 
-bm25_model = build_bm25_model(
+@st.cache_resource
+def load_bm25(
+    docs,
+    k1,
+    b
+):
+    return build_bm25_model(
+        docs,
+        k1=k1,
+        b=b
+    )
+
+bm25_model = load_bm25(
     tokenized_documents,
-    k1=k1,
-    b=b
+    k1,
+    b
 )
 query = st.text_input(
     "Enter Query"
 )
-refined_query = refine_query(
-    query
-)
+
 method = st.selectbox(
     "Search Method",
     [
@@ -126,7 +149,7 @@ if st.button("Search"):
         )
     
     else:
-
+        refined_query = refine_query(query)
         st.success(
             f"Method: {method}"
         )
