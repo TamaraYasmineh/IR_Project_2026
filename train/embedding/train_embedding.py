@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import joblib
 
@@ -20,7 +21,10 @@ model, embeddings = build_embedding_model(
 )
 
 print("Saving embeddings...")
-
+os.makedirs(
+    "models/embeddings",
+    exist_ok=True
+)
 joblib.dump(
     embeddings,
     "models/embeddings/embeddings.pkl"
